@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Moinuddin Universal Itinerary Formatter</title>
+
+<style>
+body{font-family:Arial,sans-serif;padding:20px;background:#0a0c14;color:#e6eef6;}
+textarea{width:100%;height:200px;padding:10px;margin-bottom:10px;background:#001926;color:#fff;font-family:monospace;}
+
+button{padding:4px 8px;margin:2px;border:none;border-radius:4px;cursor:pointer;font-weight:600;}
+
+.x{
+    padding:4px;
+    margin:6px 0;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:#002040;
+    border-radius:4px;
+}
+
+.copyBtn{
+    padding:2px 8px;
+    background:#2bd67b;
+    color:#001926;
+    border-radius:4px;
+    cursor:pointer;
+    font-size:12px;
+}
+.copyBtn.copied{
+    background:#d9534f;
+    color:#fff;
+}
+
+/* Admin Tag */
+#adminTag{
+    position:fixed;
+    top:10px;
+    right:10px;
+    color:#8affc1;
+    font-size:12px;
+    cursor:pointer;
+    opacity:.6;
+}
+#adminTag:hover{opacity:1;}
+
+/* Admin Panel */
+#adminPanel{
+    position:fixed;
+    top:30px;
+    right:10px;
+    width:300px;
+    background:#071424;
+    border:1px solid #0b3140;
+    padding:12px;
+    border-radius:8px;
+    display:none;
+    opacity:0;
+    transition:opacity .2s, transform .2s;
+    transform:translateY(-6px);
+    z-index:9999;
+}
+#adminPanel.show{
+    display:block;
+    opacity:1;
+    transform:translateY(0);
+}
+
+footer{margin-top:18px;font-size:12px;color:#9fd8c2;}
+</style>
+</head>
+<body>
+
+<h2>Moinuddin Universal Itinerary Formatter</h2>
+
+<textarea id="input" placeholder="Paste itinerary here..."></textarea><br>
+
+<button onclick="copyAll()">Copy All</button>
+<button onclick="clearAll()">Clear</button>
+
+<div id="result"></div>
+
+
+<!-- Admin -->
+<div id="adminTag">admin</div>
+
+<div id="adminPanel">
+    <h3>Admin Panel</h3>
+    <button onclick="logoutAdmin()">Logout</button>
+</div>
+
+
+<footer>Copyright © Moinuddin M</footer>
+
+
+<script>
+/* -------------------- Admin Settings -------------------- */
+const ADMIN_PASS = "Moin@78601";
+let adminUnlocked = false;
+
+/* -------------------- PARSER FUNCTION -------------------- */
+function parseLine(line){
+    if(!line) return null;
+    line = line.trim();
+
+    if(/ARNK|OPERATED BY|MIS|TEXT|KEEP PNR/i.test(line)) return null;
+
+    line = line.replace(/^\s*\d+[\.\s]+/, "");
+
+    let m = line.match(/([A-Z0-9]{2})\s*([0-9]{1,4}[A-Z]?)/);
+    if(!m) return null;
+
+    const airline = m[1].toUpperCase();
+    const flight  = m[2].toUpperCase();
+    let rest = line.slice(m.index + m[0].length).trim();
+
+    let clsMatch = rest.match(/\b([A-Z])\s*\d{2}[A-Z]{3}/);
+    if(!clsMatch) return null;
+    const cls = clsMatch[1].toUpperCase();
+
+    let dateMatch = rest.match(/(\d{2}[A-Z]{3})/);
+    if(!dateMatch) return null;
+    const date = dateMatch[1].toUpperCase();
+
+    let odMatch = rest.match(/([A-Z]{3})([A-Z]{3})/);
+    if(!odMatch) return null;
+    const od = odMatch[1] + odMatch[2];
+
+    return `0${airline}${flight} ${cls} ${date} ${od} QF`;
+}
+
+/* -------------------- Update Result -------------------- */
+function updateResult(){
+    const input = document.getElementById("input").value;
+    const box = document.getElementById("result");
+    box.innerHTML = "";
+
+    if(!input) return;
+
+    input.split(/\n/).forEach(line=>{
+        const formatted = parseLine(line);
+        if(formatted){
+            const row = document.createElement("div");
+            row.className = "x";
+
+            const t = document.createElement("span");
+            t.textContent = formatted;
+
+            const btn = document.createElement("button");
+            btn.className = "copyBtn";
+            btn.textContent = "Copy";
+            btn.onclick = () => {
+                navigator.clipboard.writeText(formatted);
+                btn.classList.add("copied");
+                btn.textContent = "Copied";
+            };
+
+            row.appendChild(t);
+            row.appendChild(btn);
+            box.appendChild(row);
+        }
+    });
+}
+
+/* -------------------- Buttons -------------------- */
+function copyAll(){
+    const lines = [...document.querySelectorAll(".x span")].map(n=>n.textContent);
+    navigator.clipboard.writeText(lines.join("\n"));
+    document.querySelectorAll(".copyBtn").forEach(btn=>{
+        btn.classList.add("copied");
+        btn.textContent = "Copied";
+    });
+}
+
+function clearAll(){
+    document.getElementById("input").value="";
+    updateResult();
+}
+
+/* -------------------- Admin Logic -------------------- */
+document.getElementById("adminTag").onclick = ()=>{
+    if(!adminUnlocked){
+        let p = prompt("Enter Admin Password:");
+        if(p === ADMIN_PASS){
+            adminUnlocked = true;
+            document.getElementById("adminPanel").classList.add("show");
+            alert("Admin logged in");
+        } else {
+            alert("Wrong password");
+        }
+    } else {
+        document.getElementById("adminPanel").classList.toggle("show");
+    }
+};
+
+function logoutAdmin(){
+    adminUnlocked = false;
+    document.getElementById("adminPanel").classList.remove("show");
+    alert("Logged out");
+}
+
+/* -------------------- Live Update -------------------- */
+document.getElementById("input").addEventListener("input", updateResult);
+</script>
+
+</body>
+</html>
